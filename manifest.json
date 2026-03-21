@@ -1,0 +1,8 @@
+{
+  "name": "Raven Scool",
+  "short_name": "Raven",
+  "display": "standalone",
+  "background_color": "#07101f",
+  "theme_color": "#07101f",
+  "start_url": "."
+}
