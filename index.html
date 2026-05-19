@@ -209,7 +209,8 @@ button,select,input{font-family:var(--fb)}
 .pc-RT      {background:rgba(244,114,182,.15);border-left-color:rgba(244,114,182,.4)}
 .pc-RTM     {background:rgba(245,166,35,.18);border-left-color:rgba(245,166,35,.4)}
 .pc-R       {background:rgba(251,146,60,.15);border-left-color:rgba(251,146,60,.4)}
-.pc-YI      {background:rgba(52,211,153,.15);border-left-color:rgba(52,211,153,.4)}
+.pc-AI      {background:rgba(99,102,241,.15);border-left-color:rgba(99,102,241,.4)}
+.pc-AI .pc-label{color:#818cf8}
 /* Pending pulse */
 @keyframes pcPend{0%,100%{opacity:.6}50%{opacity:1}}
 .pc-pending{animation:pcPend 2s ease-in-out infinite}
@@ -257,7 +258,7 @@ button,select,input{font-family:var(--fb)}
 .pck-RT     {border-color:rgba(244,114,182,.4);background:rgba(244,114,182,.12);color:#f472b6}
 .pck-RTM    {border-color:rgba(245,166,35,.4);background:rgba(245,166,35,.12);color:var(--am)}
 .pck-R      {border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.12);color:#fb923c}
-.pck-YI     {border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.12);color:#34d399}
+.pck-AI     {border-color:rgba(99,102,241,.4);background:rgba(99,102,241,.12);color:#818cf8}
 .pck-btn:active{transform:scale(.97)}
 .pck-clear{width:100%;padding:10px;border-radius:var(--r);border:1px solid var(--b);background:transparent;color:var(--t3);font-size:13px;cursor:pointer}
 /* Warning detail popup */
@@ -527,9 +528,10 @@ button,select,input{font-family:var(--fb)}
       <button class="pck-btn pck-HI" onclick="pickShift('HI')">🏖 Hft. İzin</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
-      <button class="pck-btn pck-RT" onclick="pickShift('RT')" style="padding:8px 4px;font-size:12px">🌸 Res.Tatil</button>
+      <button class="pck-btn pck-RT" onclick="pickShift('RT')" style="padding:8px 4px;font-size:12px">🇹🇷 Res.Tatil</button>
       <button class="pck-btn pck-RTM" onclick="pickShift('RTM')" style="padding:8px 4px;font-size:12px">💼 Tat.Mesai</button>
-      <button class="pck-btn pck-R" onclick="pickShift('R')" style="padding:8px 4px;font-size:12px">🤒 Rapor</button>
+      <button class="pck-btn pck-R"  onclick="pickShift('R')"  style="padding:8px 4px;font-size:12px">🤒 Rapor</button>
+      <button class="pck-btn pck-AI" onclick="pickShift('AI')" style="padding:8px 4px;font-size:12px">💳 Alacak</button>
     </div>
     <button class="pck-clear" onclick="pickShift(null)">✕ Temizle</button>
   </div>
@@ -546,8 +548,7 @@ button,select,input{font-family:var(--fb)}
 // CONSTANTS
 // ═══════════════════════════════════════════════
 const ROLES = { MY:'Mağaza Müdürü', MYY:'Müdür Yardımcısı', FT:'Tam Zamanlı', PT:'Yarı Zamanlı' };
-const REQUIRED_TYPES = new Set(['NORMAL','HF']);
-const HIDE_BODY = new Set(['RT','R','YI']);
+const HIDE_BODY = new Set(['RT','R','YI','AI']); // HI gösteriyor (presets visible), AI de gizle
 const SPECIAL_TYPES = { RT:'Resmi Tatil', RTM:'Tatil Mesai', R:'Rapor', YI:'Yıllık İzin' };
 const TYPE_LBL = { NORMAL:'Normal',HF:'Hft. Tam',HI:'Hft. İzin',RT:'Res. Tatil',RTM:'Tatil Mesai',R:'Rapor',YI:'Yıllık İzin' };
 const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -561,7 +562,7 @@ const HOLIDAYS = {
     '03-21':{n:'Ramazan 2. Gün',half:false},
     '03-22':{n:'Ramazan 3. Gün',half:false},
     '04-23':{n:'Çocuk Bayramı',half:false},
-    '05-01':{n:'Emek Günü',half:false},
+    '05-01':{n:'Emek ve Dayanışma Günü',half:false},
     '05-19':{n:'Gençlik Bayramı',half:false},
     '05-26':{n:'Kurban Arifesi',half:true},
     '05-27':{n:'Kurban 1. Gün',half:false},
@@ -580,7 +581,7 @@ const HOLIDAYS = {
     '03-21':{n:'Ramazan 2. Gün',half:false},
     '03-22':{n:'Ramazan 3. Gün',half:false},
     '04-23':{n:'Çocuk Bayramı',half:false},
-    '05-01':{n:'Emek Günü',half:false},
+    '05-01':{n:'Emek ve Dayanışma Günü',half:false},
     '05-19':{n:'Gençlik Bayramı',half:false},
     '05-26':{n:'Kurban Arifesi',half:true},
     '05-27':{n:'Kurban 1. Gün',half:false},
@@ -598,36 +599,38 @@ const DAYS_FULL = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','
 const DAYS_SHORT = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
 
 const SHIFT_INFO = {
-  ACILIS:  { label:'Açılış',     icon:'☀️',  isWork:true  },
-  KAPANIS: { label:'Kapanış',    icon:'🌙',  isWork:true  },
-  FULL:    { label:'Full',       icon:'⚡',  isWork:true  },
+  ACILIS:  { label:'Açılış',      icon:'☀️',  isWork:true  },
+  KAPANIS: { label:'Kapanış',     icon:'🌙',  isWork:true  },
+  FULL:    { label:'Full',        icon:'⚡',  isWork:true  },
   HI:      { label:'Hft. İzin',  icon:'🏖',  isWork:false },
-  RT:      { label:'Res. Tatil', icon:'🌸',  isWork:false },
+  RT:      { label:'Res. Tatil',  icon:'🇹🇷', isWork:false },
   RTM:     { label:'Tat. Mesai', icon:'💼',  isWork:true  },
-  R:       { label:'Rapor',      icon:'🤒',  isWork:false },
-  YI:      { label:'Yıllık İzin',icon:'🌴',  isWork:false },
-  // Eski verilerle uyumluluk için alias
-  IZIN:    { label:'İzin',       icon:'🏖',  isWork:false }
+  R:       { label:'Rapor',       icon:'🤒',  isWork:false },
+  YI:      { label:'Yıllık İzin', icon:'🌴',  isWork:false },
+  AI:      { label:'Alacak İzni', icon:'💳',  isWork:false, countsReq:true },
+  IZIN:    { label:'İzin',        icon:'🏖',  isWork:false }
 };
-// Eski 'IZIN' değerini 'HI'ye normalize et
 function normShift(v){ return v==='IZIN'?'HI':v; }
+
+// AI: gereken saate dahil edilir (rawReq artar) ama çalışılmaz → bakiye erir
+const REQUIRED_TYPES = new Set(['NORMAL','HF','AI']);
 
 // Role-based presets
 // Varsayılan vardiya saatleri — role göre
 const DEFAULT_SHIFT_TIMES = {
-  MY:  { sS:'08:45', sE:'17:45', aS:'14:15', aE:'21:15', fS:'08:45', fE:'21:15' },
-  MYY: { sS:'08:45', sE:'17:45', aS:'14:15', aE:'21:15', fS:'08:45', fE:'21:15' },
-  FT:  { sS:'08:45', sE:'17:45', aS:'14:15', aE:'21:15', fS:'08:45', fE:'21:15' },
-  PT:  { sS:'08:45', sE:'14:15', aS:'17:15', aE:'21:15', fS:'08:45', fE:'21:15' }
+  MY:  { sS:'08:45', sE:'17:45', sM:1.5, aS:'14:15', aE:'21:15', aM:1.0, fS:'08:45', fE:'21:15', fM:1.5 },
+  MYY: { sS:'08:45', sE:'17:45', sM:1.5, aS:'14:15', aE:'21:15', aM:1.0, fS:'08:45', fE:'21:15', fM:1.5 },
+  FT:  { sS:'08:45', sE:'17:45', sM:1.5, aS:'14:15', aE:'21:15', aM:1.0, fS:'08:45', fE:'21:15', fM:1.5 },
+  PT:  { sS:'08:45', sE:'14:15', sM:0.5, aS:'17:15', aE:'21:15', aM:0.5, fS:'08:45', fE:'21:15', fM:1.5 }
 };
 
 function getPresets(role){
   const t=S.shiftTimes?.[role]||DEFAULT_SHIFT_TIMES[role]||DEFAULT_SHIFT_TIMES.FT;
   return [
-    { label:'Sabah', type:'NORMAL', start:t.sS, end:t.sE },
-    { label:'Akşam', type:'NORMAL', start:t.aS, end:t.aE },
-    { label:'Full',  type:'HF',     start:t.fS, end:t.fE },
-    { label:'İzin',  type:'HI',     start:'',   end:''   }
+    { label:'Sabah', type:'NORMAL', start:t.sS, end:t.sE, mola:t.sM??calcAutoBreak(t.sS,t.sE) },
+    { label:'Akşam', type:'NORMAL', start:t.aS, end:t.aE, mola:t.aM??calcAutoBreak(t.aS,t.aE) },
+    { label:'Full',  type:'HF',     start:t.fS, end:t.fE, mola:t.fM??1.5 },
+    { label:'İzin',  type:'HI',     start:'',   end:'',   mola:1.0  }
   ];
 }
 
@@ -709,15 +712,14 @@ function getEffCell(pid,y,m,d){
 }
 function getPuantajShift(pid,y,m,d){
   const dd=getDay(pid,y,m,d);
-  const hasData=['HI','RT','R','YI','RTM'].includes(dd.type)||(dd.start&&dd.end);
+  const hasData=['HI','RT','R','YI','RTM','AI'].includes(dd.type)||(dd.start&&dd.end);
   if(!hasData) return null;
-  // Special types return their own code
   if(dd.type==='HI')  return 'HI';
   if(dd.type==='RT')  return 'RT';
   if(dd.type==='RTM') return 'RTM';
   if(dd.type==='R')   return 'R';
   if(dd.type==='YI')  return 'YI';
-  // NORMAL / HF — infer from times
+  if(dd.type==='AI')  return 'AI';
   if(dd.type==='HF') return 'FULL';
   if(dd.start) return t2d(dd.start)<=10.5?'ACILIS':'KAPANIS';
   return null;
@@ -738,6 +740,22 @@ function getEffCell(pid,y,m,d){
 // ═══════════════════════════════════════════════
 // AUTO CARRYOVER
 // ═══════════════════════════════════════════════
+// Önceki ay bakiyesi değiştiğinde sonraki aylara otomatik yansıt
+function propagateCarry(pid, fromY, fromM){
+  let y=fromY, m=fromM;
+  for(let i=0;i<6;i++){ // max 6 ay ilerle
+    let ny=y, nm=m+1;
+    if(nm>12){nm=1;ny++;}
+    const nextMd=getMD(pid,ny,nm);
+    if(nextMd.manualCarry) break; // kullanıcı elle girdiyse zinciri kır
+    const st=calcStats(pid,y,m);
+    const newCo=rndH(st.balance*10)/10; // 0.5s'ye yuvarla
+    if(Math.abs((nextMd.carryOver||0)-newCo)<0.05) break; // değişim yoksa dur
+    nextMd.carryOver=newCo;
+    y=ny; m=nm;
+  }
+}
+
 function applyAutoCarry(pid,y,m){
   const md=getMD(pid,y,m);
   if(md.manualCarry) return;
@@ -745,7 +763,8 @@ function applyAutoCarry(pid,y,m){
   const prevMd=getMD(pid,py,pm);
   const hasData=Object.values(prevMd.days).some(d=>d.start||d.type!=='NORMAL');
   if(!hasData) return;
-  md.carryOver=calcStats(pid,py,pm).balance;
+  const pst=calcStats(pid,py,pm);
+  md.carryOver=rndH(pst.balance*10)/10;
   save();
 }
 
@@ -760,15 +779,44 @@ function calcNet(start,end,bH){
   return net<=0?0:rndH(net);
 }
 
+// ── Arife günü özel hesap ──────────────────────────
+// Yarım gün tatillerde 13:00 = kesim noktası
+// 08:45-13:00 → normal (rawReq + worked'a girer)
+// 13:00-21:15 → RTM (sadece rtmWorked'a girer)
+const ARIFE_CUTOFF = 13.0; // saat 13:00
+
+function arifeCalc(dd){
+  // Döndürür: {morningNet, afternoonRtm}
+  if(!dd.start||!dd.end) return {morningNet:0, afternoonRtm:0};
+  const s=t2d(dd.start), e=t2d(dd.end), cutoff=ARIFE_CUTOFF;
+  const morningGross=Math.max(0, Math.min(e,cutoff)-s);
+  const totalGross=e-s;
+  // Molayı orantılı böl: sabah kısmına düşen mola
+  const morningBreak=totalGross>0?(dd.breakH||0)*(morningGross/totalGross):0;
+  const morningNet=rndH(Math.max(0, morningGross-morningBreak));
+  const afternoonRtm=Math.max(0, e-cutoff); // mola düşülmüyor (ayrı ödeme)
+  return {morningNet, afternoonRtm};
+}
+
 function calcStats(pid,y,m){
   const md=getMD(pid,y,m), dr=dRate(pid), N=dim(y,m);
   const isNow=y===now.getFullYear()&&m===now.getMonth()+1;
   let worked=0,rtmWorked=0,rawReq=0,elapsed=0;
   for(let d=1;d<=N;d++){
     const dd=getDay(pid,y,m,d);
-    if(REQUIRED_TYPES.has(dd.type)) rawReq+=dr;
-    const net=calcNet(dd.start,dd.end,dd.breakH);
-    if(net){ if(dd.type==='RTM') rtmWorked+=net; else worked+=net; }
+    const hol=getHoliday(y,m,d);
+    const isArife=hol?.half&&REQUIRED_TYPES.has(dd.type)&&dd.start&&dd.end;
+    if(isArife){
+      // Arife: sabah normal + öğleden sonra RTM
+      const {morningNet,afternoonRtm}=arifeCalc(dd);
+      rawReq+=morningNet;   // gereken = sadece sabah saati
+      worked+=morningNet;
+      if(afternoonRtm>0) rtmWorked+=rndH(afternoonRtm);
+    } else {
+      if(REQUIRED_TYPES.has(dd.type)) rawReq+=dr;
+      const net=calcNet(dd.start,dd.end,dd.breakH);
+      if(net){ if(dd.type==='RTM') rtmWorked+=net; else worked+=net; }
+    }
     if(isNow&&d<=now.getDate()) elapsed++;
   }
   const co=md.carryOver||0, effReq=Math.max(0,rawReq-co), balance=worked-effReq;
@@ -784,11 +832,20 @@ function calcWeekStats(pid,y,m,wdays){
   wdays.forEach(d=>{
     if(d<1||d>N) return;
     const dd=getDay(pid,y,m,d);
-    if(REQUIRED_TYPES.has(dd.type)) req+=dr;
+    const hol=getHoliday(y,m,d);
+    const isArife=hol?.half&&REQUIRED_TYPES.has(dd.type)&&dd.start&&dd.end;
+    if(isArife){
+      const {morningNet,afternoonRtm}=arifeCalc(dd);
+      req+=morningNet;
+      worked+=morningNet;
+      if(afternoonRtm>0) rtmWorked+=rndH(afternoonRtm);
+    } else {
+      if(REQUIRED_TYPES.has(dd.type)) req+=dr;
+      const net=calcNet(dd.start,dd.end,dd.breakH);
+      if(net){ if(dd.type==='RTM') rtmWorked+=net; else worked+=net; }
+    }
     if(dd.type==='HI') hiC++;
-  if(dd.type==='HF') hfC++; // RTM sayılmaz
-    const net=calcNet(dd.start,dd.end,dd.breakH);
-    if(net){ if(dd.type==='RTM') rtmWorked+=net; else worked+=net; }
+    if(dd.type==='HF') hfC++;
   });
   return{worked,rtmWorked,req,balance:worked-req,hiC,hfC,weekLimit,exceeded:worked>weekLimit,ptRole};
 }
@@ -1101,12 +1158,15 @@ function mkDayCard(pid,y,m,d,hiC,hfC){
   const isSpec=dd.type in SPECIAL_TYPES;
   const holInfo=getHoliday(y,m,d);
 
-  // Plan hint
+  // Plan hint — plan var ama puantaj girilmemiş
   const plan=getPlanned(pid,y,m,d);
   const pqShift=getPuantajShift(pid,y,m,d);
   const isPlanPending=plan&&!pqShift;
-  const planHintMap={ACILIS:0,KAPANIS:1,FULL:2,IZIN:3};
-  const planHintIdx=isPlanPending?planHintMap[plan]:-1;
+  // Preset butonlarına gelen hint (ACILIS→0, KAPANIS→1, FULL→2, HI→3)
+  const planPresetMap={ACILIS:0,KAPANIS:1,FULL:2,HI:3,IZIN:3};
+  const planHintIdx=isPlanPending&&(plan in planPresetMap)?planPresetMap[plan]:-1;
+  // Özel dropdown'a gelen hint (RT, RTM, R, YI, AI)
+  const specHint=isPlanPending&&['RT','RTM','R','YI','AI'].includes(plan)?plan:null;
 
   let aPS='';
   if(dd.type==='HI') aPS='i';
@@ -1122,9 +1182,10 @@ function mkDayCard(pid,y,m,d,hiC,hfC){
   if(holInfo) cls.push('official-hol');
   if(isOff) cls.push('off-c');
   card.className=cls.join(' ');
-  const pillTypes=['HI','RT','RTM','R','YI'];
-  const pillHtml=pillTypes.includes(dd.type)?`<span class="tpill tp-${dd.type}">${TYPE_LBL[dd.type]}</span>`:'';
-  const holTagHtml=holInfo?`<span class="hol-tag">🌸 ${holInfo.half?'½ ':''}${holInfo.n}</span>`:'';
+  const pillTypes=['HI','RT','RTM','R','YI','AI'];
+  const pillLabels={HI:'Hft. İzin',RT:'Res. Tatil',RTM:'Tat. Mesai',R:'Rapor',YI:'Yıllık İzin',AI:'Alacak İzni'};
+  const pillHtml=pillTypes.includes(dd.type)?`<span class="tpill tp-${dd.type}">${pillLabels[dd.type]||dd.type}</span>`:'';
+  const holTagHtml=holInfo?`<span class="hol-tag">🇹🇷 ${holInfo.half?'½ ':''}${holInfo.n}</span>`:'';
   const brkOpts=[0.5,1.0,1.5].map(v=>`<option value="${v}" ${parseFloat(dd.breakH)===v?'selected':''}>${v===0.5?'30 dk':v===1?'1 saat':'1.5 saat'}</option>`).join('');
   const attr=`data-pid="${pid}" data-y="${y}" data-m="${m}" data-d="${d}"`;
   const pbHtml=presets.map((p,i)=>{
@@ -1143,12 +1204,13 @@ function mkDayCard(pid,y,m,d,hiC,hfC){
         ${holTagHtml}
       </div>
       ${hasW?`<span class="warn-ico" title="${warns.join('\n')}">⚠️</span>`:''}
-      <select class="spec-sel ${isSpec?'has-v':''}" ${attr} onchange="onSpec(this)">
-        <option value="">Özel</option>
-        <option value="RT" ${dd.type==='RT'?'selected':''}>🏖 Res. Tatil</option>
+      <select class="spec-sel ${isSpec?'has-v':''} ${specHint?'plan-hint':''}" ${attr} onchange="onSpec(this)">
+        <option value="">${specHint?'📌 '+SHIFT_INFO[specHint]?.label+' planlandı':'Özel'}</option>
+        <option value="RT" ${dd.type==='RT'?'selected':''}>🇹🇷 Res. Tatil</option>
         <option value="RTM" ${dd.type==='RTM'?'selected':''}>💼 Tatil Mesai</option>
         <option value="R" ${dd.type==='R'?'selected':''}>🤒 Rapor</option>
         <option value="YI" ${dd.type==='YI'?'selected':''}>🌴 Yıllık İzin</option>
+        <option value="AI" ${dd.type==='AI'?'selected':''}>💳 Alacak İzni</option>
       </select>
     </div>
     <div class="day-body" style="${showBody?'':'display:none'}">
@@ -1158,7 +1220,14 @@ function mkDayCard(pid,y,m,d,hiC,hfC){
         <div class="tg"><span class="tg-l">Başlangıç</span><input type="time" class="ti" value="${dd.start||''}" ${attr} data-field="start" onchange="onTime(this)"></div>
         <div class="tg"><span class="tg-l">Bitiş</span><input type="time" class="ti" value="${dd.end||''}" ${attr} data-field="end" onchange="onTime(this)"></div>
         <div class="tg"><span class="tg-l">Mola</span><select class="bsel" ${attr} onchange="onBreak(this)">${brkOpts}</select></div>
-        <div class="net-box"><div class="net-v ${net===null?'emp':''}">${net!==null?net:'—'}</div><div class="net-l">net saat</div></div>
+        <div class="net-box">${(()=>{
+          const hol2=getHoliday(y,m,d);
+          if(hol2?.half&&dd.start&&dd.end&&t2d(dd.end)>ARIFE_CUTOFF){
+            const {morningNet,afternoonRtm}=arifeCalc(dd);
+            return `<div class="net-v" style="font-size:13px;line-height:1.3"><span style="color:var(--ac2)">${morningNet}s</span><br><span style="color:var(--am);font-size:11px">+${rndH(afternoonRtm)}s RTM</span></div><div class="net-l">arife bölünmüş</div>`;
+          }
+          return `<div class="net-v ${net===null?'emp':''}">${net!==null?net:'—'}</div><div class="net-l">net saat</div>`;
+        })()}</div>
       </div>
       ${hasW?`<div class="warn-row">⚠ ${warns.join(' · ')}</div>`:''}`:''}
     </div>`;
@@ -1477,33 +1546,39 @@ document.addEventListener('click',e=>{
 function onSpec(el){
   const{pid,y,m,d}=el.dataset;
   const dd=getDay(pid,+y,+m,+d);
-  if(el.value){dd.type=el.value;if(el.value!=='RTM'){dd.start='';dd.end='';}}
+  if(el.value){dd.type=el.value;if(!['RTM'].includes(el.value)){dd.start='';dd.end='';}}
   else dd.type='NORMAL';
-  setDay(pid,+y,+m,+d,dd); save(); renderPuantaj();
+  setDay(pid,+y,+m,+d,dd); save();
+  propagateCarry(pid,+y,+m);
+  renderPuantaj();
 }
 function onTime(el){
   const{pid,y,m,d,field}=el.dataset;
   const dd=getDay(pid,+y,+m,+d); dd[field]=el.value;
-  setDay(pid,+y,+m,+d,dd); save(); renderSum(); renderCal();
+  setDay(pid,+y,+m,+d,dd); save();
+  propagateCarry(pid,+y,+m);
+  renderSum(); renderCal();
 }
 function onBreak(el){
   const{pid,y,m,d}=el.dataset;
   const dd=getDay(pid,+y,+m,+d); dd.breakH=parseFloat(el.value);
-  setDay(pid,+y,+m,+d,dd); save(); renderSum(); renderCal();
+  setDay(pid,+y,+m,+d,dd); save();
+  propagateCarry(pid,+y,+m);
+  renderSum(); renderCal();
 }
 function applyPreset(idx,pid,y,m,d){
   const role=getRole(pid), ps=getPresets(role)[idx];
   const dd=getDay(pid,y,m,d);
-  // Toggle off if same preset already active
   const isActive=(
-    (idx===0&&dd.type==='NORMAL'&&dd.start==='08:45'&&dd.end===(role==='PT'?'14:15':'17:45'))||
-    (idx===1&&dd.type==='NORMAL'&&dd.start===(role==='PT'?'17:15':'14:15'))||
-    (idx===2&&dd.type==='HF')||
-    (idx===3&&dd.type==='HI')
+    (idx===0&&dd.type==='NORMAL'&&dd.start===ps.start&&dd.end===ps.end)||
+    (idx===1&&dd.type==='NORMAL'&&dd.start===ps.start)||
+    (idx===2&&dd.type==='HF')||(idx===3&&dd.type==='HI')
   );
   if(isActive){ dd.type='NORMAL'; dd.start=''; dd.end=''; dd.breakH=1.5; }
-  else{ dd.type=ps.type; dd.start=ps.start; dd.end=ps.end; if(ps.type!=='HI') dd.breakH=calcAutoBreak(ps.start,ps.end); }
-  setDay(pid,y,m,d,dd); save(); renderPuantaj();
+  else{ dd.type=ps.type; dd.start=ps.start; dd.end=ps.end; if(ps.type!=='HI') dd.breakH=ps.mola??calcAutoBreak(ps.start,ps.end); }
+  setDay(pid,y,m,d,dd); save();
+  propagateCarry(pid,y,m);
+  renderPuantaj();
 }
 function onSet(k,v){ S.settings[k]=parseFloat(v)||0; save(); renderSum(); renderCal(); }
 function syncSettings(){ Object.entries(S.settings).forEach(([k,v])=>{const e=document.getElementById('set_'+k);if(e&&document.activeElement!==e)e.value=v;}); }
@@ -1516,6 +1591,7 @@ document.getElementById('carryInp').addEventListener('change',e=>{
   const v=parseFloat(e.target.value)||0;
   const md=getMD(S.pid,S.year,S.month); md.carryOver=v; md.manualCarry=true;
   document.getElementById('autoBadge').style.display='none';
+  propagateCarry(S.pid,S.year,S.month);
   updateCarryBadge(v); save(); renderSum(); renderCal();
 });
 
@@ -1699,41 +1775,52 @@ function askResetAll(){
 function openShiftTimesPopup(){
   const roles=['MY','MYY','FT','PT'];
   const roleLabels={MY:'Mağaza Müdürü (MY)',MYY:'Müdür Yardımcısı (MYY)',FT:'Tam Zamanlı (FT)',PT:'Yarı Zamanlı (PT)'};
-  const fieldLabels={sS:'Sabah Giriş',sE:'Sabah Çıkış',aS:'Akşam Giriş',aE:'Akşam Çıkış',fS:'Full Giriş',fE:'Full Çıkış'};
-  const fields=['sS','sE','aS','aE','fS','fE'];
+  const molaOpts=(sel)=>[0.5,1.0,1.5].map(v=>`<option value="${v}" ${parseFloat(sel)===v?'selected':''}>${v===0.5?'30 dk':v===1?'1 saat':'1.5 saat'}</option>`).join('');
   let html='';
   roles.forEach(role=>{
     const t=S.shiftTimes[role]||DEFAULT_SHIFT_TIMES[role];
-    html+=`<div style="margin-bottom:14px">
+    html+=`<div style="margin-bottom:16px">
       <div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--b);padding-bottom:5px;margin-bottom:8px">${roleLabels[role]}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">`;
-    fields.forEach(f=>{
-      html+=`<div>
-        <div style="font-size:9px;color:var(--t3);margin-bottom:2px">${fieldLabels[f]}</div>
-        <input type="time" class="ti" id="st_${role}_${f}" value="${t[f]||''}" style="width:100%;font-size:12px;padding:4px 5px">
+      <div style="display:grid;grid-template-columns:3fr 3fr 2fr;gap:4px;margin-bottom:3px">
+        <div style="font-size:9px;color:var(--t3);text-align:center">Giriş</div>
+        <div style="font-size:9px;color:var(--t3);text-align:center">Çıkış</div>
+        <div style="font-size:9px;color:var(--t3);text-align:center">Mola</div>
       </div>`;
+    [
+      {prefix:'s',lbl:'Sabah ☀️'},
+      {prefix:'a',lbl:'Akşam 🌙'},
+      {prefix:'f',lbl:'Full ⚡'}
+    ].forEach(({prefix,lbl})=>{
+      html+=`<div style="display:grid;grid-template-columns:3fr 3fr 2fr;gap:4px;align-items:center;margin-bottom:5px">
+        <input type="time" class="ti" id="st_${role}_${prefix}S" value="${t[prefix+'S']||''}" style="font-size:11px;padding:4px">
+        <input type="time" class="ti" id="st_${role}_${prefix}E" value="${t[prefix+'E']||''}" style="font-size:11px;padding:4px">
+        <select class="bsel" id="st_${role}_${prefix}M" style="font-size:11px;padding:4px">${molaOpts(t[prefix+'M']??1.0)}</select>
+      </div>
+      <div style="font-size:9px;color:var(--t3);margin-bottom:6px;margin-top:-2px">${lbl}</div>`;
     });
-    html+=`</div></div>`;
+    html+=`</div>`;
   });
   document.getElementById('shiftTimesContent').innerHTML=html;
   document.getElementById('shiftTimesPopupOv').classList.add('open');
-  // close settings drawer
   closeD(document.getElementById('sDrawer'));
 }
 
 function saveShiftTimes(){
   const roles=['MY','MYY','FT','PT'];
-  const fields=['sS','sE','aS','aE','fS','fE'];
   roles.forEach(role=>{
     if(!S.shiftTimes[role]) S.shiftTimes[role]={...DEFAULT_SHIFT_TIMES[role]};
-    fields.forEach(f=>{
-      const el=document.getElementById(`st_${role}_${f}`);
-      if(el) S.shiftTimes[role][f]=el.value;
+    ['s','a','f'].forEach(p=>{
+      const sEl=document.getElementById(`st_${role}_${p}S`);
+      const eEl=document.getElementById(`st_${role}_${p}E`);
+      const mEl=document.getElementById(`st_${role}_${p}M`);
+      if(sEl) S.shiftTimes[role][p+'S']=sEl.value;
+      if(eEl) S.shiftTimes[role][p+'E']=eEl.value;
+      if(mEl) S.shiftTimes[role][p+'M']=parseFloat(mEl.value)||1.0;
     });
   });
   save();
   document.getElementById('shiftTimesPopupOv').classList.remove('open');
-  showModal('✅ Kaydedildi','Vardiya saatleri güncellendi. Yeni vardiyalarda geçerli olacak.',[{label:'Tamam',action:()=>{}}]);
+  showModal('✅ Kaydedildi','Vardiya saatleri ve molalar güncellendi.',[{label:'Tamam',action:()=>{}}]);
 }
 
 function resetShiftTimes(){
