@@ -786,68 +786,110 @@ function calcNet(start,end,bH){
 const ARIFE_CUTOFF = 13.0; // saat 13:00
 
 function arifeCalc(dd){
-  // Döndürür: {morningNet, afternoonRtm}
   if(!dd.start||!dd.end) return {morningNet:0, afternoonRtm:0};
   const s=t2d(dd.start), e=t2d(dd.end), cutoff=ARIFE_CUTOFF;
   const morningGross=Math.max(0, Math.min(e,cutoff)-s);
   const totalGross=e-s;
-  // Molayı orantılı böl: sabah kısmına düşen mola
   const morningBreak=totalGross>0?(dd.breakH||0)*(morningGross/totalGross):0;
   const morningNet=rndH(Math.max(0, morningGross-morningBreak));
-  const afternoonRtm=Math.max(0, e-cutoff); // mola düşülmüyor (ayrı ödeme)
+  const afternoonRtm=Math.max(0, e-cutoff);
   return {morningNet, afternoonRtm};
 }
 
+// Haftalık gerekeni hesapla — haftalık limitle sınırlı
+// (HI girilmese de 45s/30s üstüne çıkamaz)
+function weekRequired(pid, y, m, wdays){
+  const dr=dRate(pid), N=dim(y,m), limit=isPT(pid)?30:45;
+  let workDays=0, arifeH=0;
+  wdays.forEach(d=>{
+    if(d<1||d>N) return;
+    const dd=getDay(pid,y,m,d);
+    const hol=getHoliday(y,m,d);
+    if(hol?.half&&REQUIRED_TYPES.has(dd.type)&&dd.start&&dd.end){
+      arifeH+=arifeCalc(dd).morningNet;
+    } else if(REQUIRED_TYPES.has(dd.type)){
+      workDays++;
+    }
+  });
+  return Math.min(workDays*dr + arifeH, limit);
+}
+
 function calcStats(pid,y,m){
-  const md=getMD(pid,y,m), dr=dRate(pid), N=dim(y,m);
+  const md=getMD(pid,y,m), N=dim(y,m);
   const isNow=y===now.getFullYear()&&m===now.getMonth()+1;
-  let worked=0,rtmWorked=0,rawReq=0,elapsed=0;
+  let worked=0, rtmWorked=0, rawReq=0, elapsed=0;
+
+  // Çalışılan saatler: gün gün hesap
   for(let d=1;d<=N;d++){
     const dd=getDay(pid,y,m,d);
     const hol=getHoliday(y,m,d);
     const isArife=hol?.half&&REQUIRED_TYPES.has(dd.type)&&dd.start&&dd.end;
     if(isArife){
-      // Arife: sabah normal + öğleden sonra RTM
-      const {morningNet,afternoonRtm}=arifeCalc(dd);
-      rawReq+=morningNet;   // gereken = sadece sabah saati
+      const{morningNet,afternoonRtm}=arifeCalc(dd);
       worked+=morningNet;
       if(afternoonRtm>0) rtmWorked+=rndH(afternoonRtm);
     } else {
-      if(REQUIRED_TYPES.has(dd.type)) rawReq+=dr;
       const net=calcNet(dd.start,dd.end,dd.breakH);
       if(net){ if(dd.type==='RTM') rtmWorked+=net; else worked+=net; }
     }
     if(isNow&&d<=now.getDate()) elapsed++;
   }
-  const co=md.carryOver||0, effReq=Math.max(0,rawReq-co), balance=worked-effReq;
+
+  // Gereken saatler: haftalık limitli
+  getWeeks(y,m).forEach(wdays=>{ rawReq+=weekRequired(pid,y,m,wdays); });
+
+  const co=md.carryOver||0, effReq=Math.max(0,rawReq-co);
+  const balance=worked-effReq;
   let predicted=null;
   if(isNow&&elapsed>0) predicted=(worked/elapsed)*N-effReq;
   return{worked,rtmWorked,rawReq,required:effReq,balance,predicted,co};
 }
 
+// Ayın ilk kısmi haftasında önceki aydan HI var mı kontrol et
+// Örn: Mayıs 1 Cuma ise → Nisan 27-30 aynı haftada → orada HI varsa uyarı çıkmamalı
+function prevMonthHasHI(pid, y, m){
+  const firstDow = dow(y, m, 1);
+  if(firstDow === 1) return false; // Ayın 1'i Pazartesi → önceki aydan gün yok
+  const daysFromPrev = firstDow === 0 ? 6 : firstDow - 1;
+  let py = y, pm = m - 1;
+  if(pm < 1){ pm = 12; py--; }
+  const prevN = dim(py, pm);
+  for(let i = 0; i < daysFromPrev; i++){
+    const pd = prevN - i;
+    if(pd >= 1){ const pdd = getDay(pid, py, pm, pd); if(pdd.type === 'HI') return true; }
+  }
+  return false;
+}
+
 function calcWeekStats(pid,y,m,wdays){
-  const dr=dRate(pid), N=dim(y,m), role=getRole(pid);
+  const N=dim(y,m), role=getRole(pid);
   const ptRole=role==='PT', weekLimit=ptRole?30:45;
-  let worked=0,rtmWorked=0,req=0,hiC=0,hfC=0;
+  let worked=0, rtmWorked=0, hiC=0, hfC=0;
   wdays.forEach(d=>{
     if(d<1||d>N) return;
     const dd=getDay(pid,y,m,d);
     const hol=getHoliday(y,m,d);
     const isArife=hol?.half&&REQUIRED_TYPES.has(dd.type)&&dd.start&&dd.end;
     if(isArife){
-      const {morningNet,afternoonRtm}=arifeCalc(dd);
-      req+=morningNet;
+      const{morningNet,afternoonRtm}=arifeCalc(dd);
       worked+=morningNet;
       if(afternoonRtm>0) rtmWorked+=rndH(afternoonRtm);
     } else {
-      if(REQUIRED_TYPES.has(dd.type)) req+=dr;
       const net=calcNet(dd.start,dd.end,dd.breakH);
       if(net){ if(dd.type==='RTM') rtmWorked+=net; else worked+=net; }
     }
     if(dd.type==='HI') hiC++;
     if(dd.type==='HF') hfC++;
   });
-  return{worked,rtmWorked,req,balance:worked-req,hiC,hfC,weekLimit,exceeded:worked>weekLimit,ptRole};
+  const req=weekRequired(pid,y,m,wdays);
+
+  // HI girilmemiş uyarısı — önceki ayın aynı haftasındaki HI de sayılır
+  const isFirstWeek = wdays[0] === 1;
+  const hasHIAnywhere = hiC > 0 || (isFirstWeek && prevMonthHasHI(pid, y, m));
+  const hasWorkDays = wdays.some(d=>{ const dd=getDay(pid,y,m,d); return REQUIRED_TYPES.has(dd.type); });
+  const noIzinWarn = !hasHIAnywhere && hasWorkDays;
+
+  return{worked,rtmWorked,req,balance:worked-req,hiC,hfC,weekLimit,exceeded:worked>weekLimit,ptRole,noIzinWarn};
 }
 
 // ═══════════════════════════════════════════════
@@ -1136,6 +1178,15 @@ function renderCal(){
       const ww=document.createElement('div'); ww.className='week-limit-warn';
       ww.innerHTML=ws.ptRole?`⛔ <strong>PT personel haftalık çalışma saati net 30 saat olup bu süre hiçbir şekilde aşılamaz.</strong> Bu hafta: ${fmtH(ws.worked)}s`:`⚠ Haftalık 45 saati aştı. Bu hafta: ${fmtH(ws.worked)}s`;
       wg.appendChild(ww);
+    }
+    if(ws.noIzinWarn){
+      const wi2=document.createElement('div');
+      wi2.className='week-limit-warn';
+      wi2.style.background='rgba(245,166,35,.1)';
+      wi2.style.borderColor='rgba(245,166,35,.3)';
+      wi2.style.color='var(--am)';
+      wi2.innerHTML='⚠ Bu hafta için haftalık izin girilmedi — her çalışana haftada en az 1 gün izin kullandırılması zorunludur';
+      wg.appendChild(wi2);
     }
     container.appendChild(wg);
   });
